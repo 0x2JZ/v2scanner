@@ -109,3 +109,42 @@ jobs:
         with:
           name: V2Scanner-macOS-AppleSilicon
           path: mac_app/dist/V2Scanner
+
+  release:
+    needs: [build-windows, build-macos-intel, build-macos-arm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Package artifacts
+        run: |
+          cd artifacts
+          cd V2Scanner-Windows && zip ../V2Scanner-Windows.zip V2Scanner.exe && cd ..
+          cd V2Scanner-macOS-Intel && chmod +x V2Scanner && zip ../V2Scanner-macOS-Intel.zip V2Scanner && cd ..
+          cd V2Scanner-macOS-AppleSilicon && chmod +x V2Scanner && zip ../V2Scanner-macOS-AppleSilicon.zip V2Scanner && cd ..
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes 2>/dev/null || true
+          gh release create latest \
+            artifacts/V2Scanner-Windows.zip \
+            artifacts/V2Scanner-macOS-Intel.zip \
+            artifacts/V2Scanner-macOS-AppleSilicon.zip \
+            --title "V2Scanner — Latest Build" \
+            --notes "Automated build from \`main\` branch.
+
+          **Downloads:**
+          - **Windows**: V2Scanner-Windows.zip
+          - **macOS Intel**: V2Scanner-macOS-Intel.zip
+          - **macOS Apple Silicon (M1/M2/M3/M4)**: V2Scanner-macOS-AppleSilicon.zip
+
+          No Python or dependencies required. Just download, extract, and run." \
+            --latest
