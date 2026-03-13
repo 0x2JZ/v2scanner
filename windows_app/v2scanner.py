@@ -607,7 +607,11 @@ class V2ScannerApp:
         self.results_list.configure(state=tk.DISABLED)
         self.results_count.configure(text="")
 
-        workers = int(self.workers_var.get())
+        try:
+            workers = max(1, min(32, int(self.workers_var.get())))
+        except (ValueError, TypeError):
+            workers = DEFAULT_WORKERS
+        self.workers_var.set(str(workers))
         self.count_label.configure(text=f"{len(configs)} configs")
         self.status_label.configure(text="Starting...")
 

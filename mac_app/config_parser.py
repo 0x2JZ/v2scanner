@@ -31,9 +31,11 @@ def is_base64(s: str) -> bool:
     except Exception:
         return False
 
+MAX_CONFIG_LENGTH = 65536  # 64KB max per config URI
+
 @lru_cache(maxsize=2048)
 def safe_b64decode(s: str) -> Optional[str]:
-    if not s:
+    if not s or len(s) > MAX_CONFIG_LENGTH:
         return None
     try:
         s = s.replace('-', '+').replace('_', '/')

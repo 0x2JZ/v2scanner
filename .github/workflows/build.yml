@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  XRAY_VERSION: "v26.2.6"
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -20,7 +23,8 @@ jobs:
 
       - name: Download xray
         run: |
-          Invoke-WebRequest -Uri "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip" -OutFile xray.zip
+          $url = "https://github.com/XTLS/Xray-core/releases/download/${{ env.XRAY_VERSION }}/Xray-windows-64.zip"
+          Invoke-WebRequest -Uri $url -OutFile xray.zip
           Expand-Archive -Path xray.zip -DestinationPath xray_temp
           Copy-Item xray_temp/xray.exe windows_app/xray.exe
           Remove-Item -Recurse xray_temp, xray.zip
@@ -59,7 +63,7 @@ jobs:
 
       - name: Download xray
         run: |
-          curl -sL "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-macos-arm64-v8a.zip" -o xray.zip
+          curl -sL "https://github.com/XTLS/Xray-core/releases/download/${{ env.XRAY_VERSION }}/Xray-macos-arm64-v8a.zip" -o xray.zip
           unzip -o xray.zip xray -d mac_app/
           chmod +x mac_app/xray
           rm xray.zip
@@ -114,7 +118,7 @@ jobs:
           gh release create latest $ASSETS \
             --repo ${{ github.repository }} \
             --title "V2Scanner - Latest Build" \
-            --notes "Automated build from main branch.
+            --notes "Automated build from main branch (xray ${{ env.XRAY_VERSION }}).
 
           **Downloads:**
           - **Windows**: V2Scanner-Windows.zip
