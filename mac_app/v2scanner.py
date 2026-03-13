@@ -22,39 +22,38 @@ import requests
 import config_parser as parser
 import transport_builder
 
-# ── Logging ───────────────────────────────────────────
+# -- Logging ---------------------------------------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ── Constants ─────────────────────────────────────────
-IS_WINDOWS = sys.platform == "win32"
-SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW if IS_WINDOWS else 0
+# -- Constants -------------------------------------------------
 DEFAULT_TEST_URLS = ["https://www.youtube.com/generate_204", "https://www.google.com/generate_204"]
 DEFAULT_TIMEOUT = 10
 DEFAULT_WORKERS = 6
 UNSUPPORTED_PROTOCOLS = ["tuic://", "wireguard://"]
 
+# -- Platform-aware font ---------------------------------------
+FONT_FAMILY = "SF Pro Text" if sys.platform == "darwin" else "Segoe UI"
+MONO_FONT = "Menlo" if sys.platform == "darwin" else "Consolas"
 
-# ── Xray Path Resolution ─────────────────────────────
+
+# -- Xray Path Resolution -------------------------------------
 def get_xray_path() -> str:
-    """Find xray binary: bundled (PyInstaller) → same dir → PATH."""
-    # PyInstaller bundle
+    """Find xray binary: bundled (PyInstaller) -> same dir -> PATH."""
     if getattr(sys, "_MEIPASS", None):
-        bundled = os.path.join(sys._MEIPASS, "xray.exe" if IS_WINDOWS else "xray")
+        bundled = os.path.join(sys._MEIPASS, "xray")
         if os.path.isfile(bundled):
             return bundled
 
-    # Same directory as script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    local = os.path.join(script_dir, "xray.exe" if IS_WINDOWS else "xray")
+    local = os.path.join(script_dir, "xray")
     if os.path.isfile(local):
         return local
 
-    # Fallback to PATH
-    return "xray.exe" if IS_WINDOWS else "xray"
+    return "xray"
 
 
-# ── Port Finder ──────────────────────────────────────
+# -- Port Finder -----------------------------------------------
 def find_free_port() -> int:
     for attempt in range(10):
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
@@ -76,7 +75,7 @@ def find_free_port() -> int:
     raise RuntimeError("Could not find a free port")
 
 
-# ── Process Manager ──────────────────────────────────
+# -- Process Manager -------------------------------------------
 @contextmanager
 def managed_process(command: List[str], config_file: str):
     process = None
@@ -85,7 +84,6 @@ def managed_process(command: List[str], config_file: str):
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            creationflags=SUBPROCESS_FLAGS,
         )
         yield process
     finally:
@@ -102,7 +100,7 @@ def managed_process(command: List[str], config_file: str):
                 pass
 
 
-# ── Config Tester ────────────────────────────────────
+# -- Config Tester ---------------------------------------------
 class XrayTester:
     def __init__(self, xray_path: str = None, timeout: int = DEFAULT_TIMEOUT,
                  test_urls: List[str] = None):
@@ -130,14 +128,13 @@ class XrayTester:
             result = subprocess.run(
                 [self.xray_path, "version"],
                 capture_output=True, timeout=5,
-                creationflags=SUBPROCESS_FLAGS,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"xray verification failed: {result.stderr.decode()}")
         except FileNotFoundError:
             raise RuntimeError(
                 f"xray not found at: {self.xray_path}\n\n"
-                "Place xray.exe in the same folder as this app."
+                "Place the xray binary in the same folder as this app."
             )
 
     def is_supported(self, config_str: str) -> bool:
@@ -201,7 +198,7 @@ class XrayTester:
 
     def test_config(self, config_str: str) -> Tuple[bool, Optional[int], str]:
         if not self.is_supported(config_str):
-            return True, 0, config_str  # Skip unsupported, count as pass
+            return True, 0, config_str
 
         config_file = None
         try:
@@ -231,7 +228,6 @@ class XrayTester:
             with managed_process(
                 [self.xray_path, "run", "-c", config_file], config_file
             ) as process:
-                # Poll for port readiness instead of sleeping 3s
                 if not self._wait_for_port(socks_port, timeout=5.0):
                     return False, None, config_str
                 if process.poll() is not None:
@@ -270,7 +266,7 @@ class XrayTester:
                     pass
 
 
-# ── Shutdown Coordination ────────────────────────────
+# -- Shutdown Coordination -------------------------------------
 _shutdown_event = threading.Event()
 
 
@@ -325,13 +321,13 @@ def stop_tests():
     _shutdown_event.set()
 
 
-# ═══════════════════════════════════════════════════════
-#  GUI — Dark-themed tkinter
-# ═══════════════════════════════════════════════════════
+# ==============================================================
+#  GUI -- Dark-themed tkinter
+# ==============================================================
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-# ── Theme Colors ─────────────────────────────────────
+# -- Theme Colors ----------------------------------------------
 C = {
     "bg_deep":      "#0c0c12",
     "bg_panel":     "#10101a",
@@ -359,17 +355,6 @@ class V2ScannerApp:
         self.root.configure(bg=C["bg_deep"])
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        # Try to set icon if available
-        try:
-            icon_path = os.path.join(
-                getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))),
-                "icon.ico",
-            )
-            if os.path.isfile(icon_path):
-                self.root.iconbitmap(icon_path)
-        except Exception:
-            pass
-
         self._setup_styles()
         self._build_ui()
 
@@ -380,7 +365,7 @@ class V2ScannerApp:
 
         self._poll_queue()
 
-    # ── Styles ───────────────────────────────────────
+    # -- Styles ------------------------------------------------
     def _setup_styles(self):
         style = ttk.Style()
         style.theme_use("clam")
@@ -393,29 +378,29 @@ class V2ScannerApp:
         style.configure("Panel.TFrame", background=C["bg_panel"])
 
         style.configure("TLabel", background=C["bg_deep"], foreground=C["text"],
-                        font=("Segoe UI", 10))
-        style.configure("Title.TLabel", font=("Segoe UI", 18, "bold"),
+                        font=(FONT_FAMILY, 10))
+        style.configure("Title.TLabel", font=(FONT_FAMILY, 18, "bold"),
                         foreground="#f5f5ff")
-        style.configure("Subtitle.TLabel", font=("Segoe UI", 9),
+        style.configure("Subtitle.TLabel", font=(FONT_FAMILY, 9),
                         foreground=C["text_sec"])
-        style.configure("Status.TLabel", font=("Segoe UI", 10),
+        style.configure("Status.TLabel", font=(FONT_FAMILY, 10),
                         foreground=C["text_sec"])
         style.configure("Success.TLabel", foreground=C["success"])
 
         style.configure("Accent.TButton", background=C["accent"],
-                        foreground="#ffffff", font=("Segoe UI", 10, "bold"),
+                        foreground="#ffffff", font=(FONT_FAMILY, 10, "bold"),
                         padding=(16, 8))
         style.map("Accent.TButton",
                   background=[("active", "#0090cc"), ("disabled", C["bg_elevated"])])
 
         style.configure("Danger.TButton", background=C["danger"],
-                        foreground="#ffffff", font=("Segoe UI", 10, "bold"),
+                        foreground="#ffffff", font=(FONT_FAMILY, 10, "bold"),
                         padding=(16, 8))
         style.map("Danger.TButton",
                   background=[("active", "#cc2040"), ("disabled", C["bg_elevated"])])
 
         style.configure("Secondary.TButton", background=C["bg_elevated"],
-                        foreground=C["text"], font=("Segoe UI", 9),
+                        foreground=C["text"], font=(FONT_FAMILY, 9),
                         padding=(12, 6))
         style.map("Secondary.TButton",
                   background=[("active", C["border"])])
@@ -426,13 +411,12 @@ class V2ScannerApp:
         style.configure("TSpinbox", fieldbackground=C["bg_input"],
                         foreground=C["text"], arrowcolor=C["text_sec"])
 
-    # ── UI Layout ────────────────────────────────────
+    # -- UI Layout ---------------------------------------------
     def _build_ui(self):
-        # Main container with padding
         main = ttk.Frame(self.root, padding=20)
         main.pack(fill=tk.BOTH, expand=True)
 
-        # ─ Header
+        # Header
         header = ttk.Frame(main)
         header.pack(fill=tk.X, pady=(0, 16))
 
@@ -440,7 +424,7 @@ class V2ScannerApp:
         ttk.Label(header, text="  Proxy Config Tester",
                   style="Subtitle.TLabel").pack(side=tk.LEFT, padx=(4, 0), pady=(6, 0))
 
-        # ─ Input section
+        # Input section
         input_frame = ttk.Frame(main)
         input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 12))
 
@@ -448,7 +432,7 @@ class V2ScannerApp:
         input_header.pack(fill=tk.X, pady=(0, 6))
 
         ttk.Label(input_header, text="CONFIGS",
-                  font=("Segoe UI", 9, "bold"),
+                  font=(FONT_FAMILY, 9, "bold"),
                   foreground=C["text_sec"]).pack(side=tk.LEFT)
 
         btn_frame = ttk.Frame(input_header)
@@ -464,7 +448,7 @@ class V2ScannerApp:
         text_frame.pack(fill=tk.BOTH, expand=True)
 
         self.input_text = tk.Text(
-            text_frame, wrap=tk.NONE, font=("Consolas", 9),
+            text_frame, wrap=tk.NONE, font=(MONO_FONT, 11),
             bg=C["bg_input"], fg=C["text"], insertbackground=C["accent"],
             selectbackground=C["accent"], selectforeground="#fff",
             relief=tk.FLAT, padx=10, pady=8, height=8,
@@ -478,7 +462,7 @@ class V2ScannerApp:
         input_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=1, pady=1)
         self.input_text.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
 
-        # ─ Controls row
+        # Controls row
         controls = ttk.Frame(main)
         controls.pack(fill=tk.X, pady=(0, 12))
 
@@ -493,11 +477,11 @@ class V2ScannerApp:
 
         # Workers spinner
         ttk.Label(controls, text="Workers:", foreground=C["text_sec"],
-                  font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(0, 4))
+                  font=(FONT_FAMILY, 9)).pack(side=tk.LEFT, padx=(0, 4))
         self.workers_var = tk.StringVar(value="6")
         self.workers_spin = ttk.Spinbox(
             controls, from_=1, to=32, textvariable=self.workers_var,
-            width=4, font=("Segoe UI", 9),
+            width=4, font=(FONT_FAMILY, 9),
         )
         self.workers_spin.pack(side=tk.LEFT)
 
@@ -506,7 +490,7 @@ class V2ScannerApp:
                                       style="Subtitle.TLabel")
         self.count_label.pack(side=tk.RIGHT)
 
-        # ─ Progress
+        # Progress
         progress_frame = ttk.Frame(main)
         progress_frame.pack(fill=tk.X, pady=(0, 12))
 
@@ -518,12 +502,12 @@ class V2ScannerApp:
                                        style="Status.TLabel")
         self.status_label.pack(side=tk.LEFT)
 
-        # ─ Results section
+        # Results section
         results_header = ttk.Frame(main)
         results_header.pack(fill=tk.X, pady=(0, 6))
 
         ttk.Label(results_header, text="WORKING CONFIGS",
-                  font=("Segoe UI", 9, "bold"),
+                  font=(FONT_FAMILY, 9, "bold"),
                   foreground=C["success"]).pack(side=tk.LEFT)
 
         self.results_count = ttk.Label(results_header, text="",
@@ -538,12 +522,12 @@ class V2ScannerApp:
         ttk.Button(result_btns, text="Export", style="Secondary.TButton",
                    command=self._export_results).pack(side=tk.LEFT)
 
-        # Results listbox
+        # Results text
         result_frame = tk.Frame(main, bg=C["border"], bd=0, highlightthickness=0)
         result_frame.pack(fill=tk.BOTH, expand=True)
 
         self.results_list = tk.Text(
-            result_frame, wrap=tk.NONE, font=("Consolas", 9),
+            result_frame, wrap=tk.NONE, font=(MONO_FONT, 11),
             bg=C["bg_input"], fg=C["success"], insertbackground=C["accent"],
             relief=tk.FLAT, padx=10, pady=8, height=8,
             state=tk.DISABLED, borderwidth=0, highlightthickness=0,
@@ -560,9 +544,9 @@ class V2ScannerApp:
         self.results_list.tag_configure("config", foreground=C["text"])
         self.results_list.tag_configure("latency", foreground=C["success"])
         self.results_list.tag_configure("header", foreground=C["accent"],
-                                         font=("Consolas", 9, "bold"))
+                                         font=(MONO_FONT, 11, "bold"))
 
-    # ── Actions ──────────────────────────────────────
+    # -- Actions -----------------------------------------------
     def _load_file(self):
         path = filedialog.askopenfilename(
             title="Load Configs",
@@ -638,7 +622,6 @@ class V2ScannerApp:
         self.working_configs.append((config_str, delay))
         self.results_list.configure(state=tk.NORMAL)
 
-        # Protocol label
         proto = config_str.split("://")[0].upper() if "://" in config_str else "?"
         self.results_list.insert(tk.END, f"[{proto}] ", "header")
         self.results_list.insert(tk.END, f"{delay}ms ", "latency")
@@ -674,7 +657,7 @@ class V2ScannerApp:
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to export:\n{e}")
 
-    # ── Queue Polling ────────────────────────────────
+    # -- Queue Polling -----------------------------------------
     def _poll_queue(self):
         try:
             while True:
@@ -691,7 +674,7 @@ class V2ScannerApp:
                     self.progress_bar["value"] = tested
                     pct = round(tested / max(1, total) * 100, 1)
                     self.status_label.configure(
-                        text=f"Testing {tested}/{total} ({pct}%) — {working} working"
+                        text=f"Testing {tested}/{total} ({pct}%) -- {working} working"
                     )
 
                 elif kind == "working":
@@ -708,7 +691,7 @@ class V2ScannerApp:
 
                 elif kind == "stopped":
                     self.status_label.configure(
-                        text=f"Stopped — {len(self.working_configs)} working found"
+                        text=f"Stopped -- {len(self.working_configs)} working found"
                     )
                     self._finish()
 
@@ -721,7 +704,7 @@ class V2ScannerApp:
 
         self.root.after(100, self._poll_queue)
 
-    # ── Cleanup ──────────────────────────────────────
+    # -- Cleanup -----------------------------------------------
     def _on_close(self):
         if self.testing:
             stop_tests()
@@ -731,7 +714,7 @@ class V2ScannerApp:
         self.root.mainloop()
 
 
-# ═══════════════════════════════════════════════════════
+# ==============================================================
 if __name__ == "__main__":
     app = V2ScannerApp()
     app.run()
