@@ -44,40 +44,6 @@ jobs:
           name: V2Scanner-Windows
           path: windows_app/dist/V2Scanner.exe
 
-  build-macos-intel:
-    runs-on: macos-13
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install requests pyinstaller pysocks
-
-      - name: Download xray
-        run: |
-          curl -sL "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-macos-64.zip" -o xray.zip
-          unzip -o xray.zip xray -d mac_app/
-          chmod +x mac_app/xray
-          rm xray.zip
-
-      - name: Verify xray
-        run: mac_app/xray version
-
-      - name: Build
-        run: |
-          cd mac_app
-          pyinstaller build_mac.spec --noconfirm
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: V2Scanner-macOS-Intel
-          path: mac_app/dist/V2Scanner
-
   build-macos-arm:
     runs-on: macos-14
     timeout-minutes: 20
@@ -113,8 +79,7 @@ jobs:
           path: mac_app/dist/V2Scanner
 
   release:
-    needs: [build-windows, build-macos-intel, build-macos-arm]
-    if: ${{ !cancelled() && needs.build-windows.result == 'success' }}
+    needs: [build-windows, build-macos-arm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -131,9 +96,6 @@ jobs:
           if [ -d "V2Scanner-Windows" ]; then
             cd V2Scanner-Windows && zip ../V2Scanner-Windows.zip V2Scanner.exe && cd ..
           fi
-          if [ -d "V2Scanner-macOS-Intel" ]; then
-            cd V2Scanner-macOS-Intel && chmod +x V2Scanner && zip ../V2Scanner-macOS-Intel.zip V2Scanner && cd ..
-          fi
           if [ -d "V2Scanner-macOS-AppleSilicon" ]; then
             cd V2Scanner-macOS-AppleSilicon && chmod +x V2Scanner && zip ../V2Scanner-macOS-AppleSilicon.zip V2Scanner && cd ..
           fi
@@ -145,7 +107,7 @@ jobs:
           gh release delete latest --repo ${{ github.repository }} --yes 2>/dev/null || true
 
           ASSETS=""
-          for f in artifacts/V2Scanner-Windows.zip artifacts/V2Scanner-macOS-Intel.zip artifacts/V2Scanner-macOS-AppleSilicon.zip; do
+          for f in artifacts/V2Scanner-Windows.zip artifacts/V2Scanner-macOS-AppleSilicon.zip; do
             [ -f "$f" ] && ASSETS="$ASSETS $f"
           done
 
@@ -156,7 +118,6 @@ jobs:
 
           **Downloads:**
           - **Windows**: V2Scanner-Windows.zip
-          - **macOS Intel**: V2Scanner-macOS-Intel.zip
           - **macOS Apple Silicon (M1/M2/M3/M4)**: V2Scanner-macOS-AppleSilicon.zip
 
           No Python or dependencies required. Just download, extract, and run." \

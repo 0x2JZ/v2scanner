@@ -10,9 +10,10 @@ Dark-themed GUI — no installation needed. Just download and run.
 
 | Platform | Download |
 |----------|----------|
-| **Windows** (x64) | [V2Scanner.exe](https://github.com/0x2JZ/v2scanner/releases/latest/download/V2Scanner-Windows.zip) |
-| **macOS** Intel | [V2Scanner-macOS-Intel](https://github.com/0x2JZ/v2scanner/releases/latest/download/V2Scanner-macOS-Intel.zip) |
-| **macOS** Apple Silicon (M1/M2/M3/M4) | [V2Scanner-macOS-AppleSilicon](https://github.com/0x2JZ/v2scanner/releases/latest/download/V2Scanner-macOS-AppleSilicon.zip) |
+| **Windows** (x64) | [V2Scanner-Windows.zip](https://github.com/0x2JZ/v2scanner/releases/latest/download/V2Scanner-Windows.zip) |
+| **macOS** Apple Silicon (M1/M2/M3/M4) | [V2Scanner-macOS-AppleSilicon.zip](https://github.com/0x2JZ/v2scanner/releases/latest/download/V2Scanner-macOS-AppleSilicon.zip) |
+
+> Intel Mac users: build from source (see below).
 
 > **No Python or other dependencies required.** Everything is bundled into a single portable file.
 
