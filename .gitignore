@@ -1,0 +1,8 @@
+*.zip
+*.exe
+*.7z
+__pycache__/
+build/
+dist/
+*.spec.bak
+.claude/

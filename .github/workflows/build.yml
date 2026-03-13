@@ -1,0 +1,111 @@
+name: Build V2Scanner
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests pyinstaller pysocks
+
+      - name: Download xray
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip" -OutFile xray.zip
+          Expand-Archive -Path xray.zip -DestinationPath xray_temp
+          Copy-Item xray_temp/xray.exe windows_app/xray.exe
+          Remove-Item -Recurse xray_temp, xray.zip
+        shell: pwsh
+
+      - name: Verify xray
+        run: windows_app/xray.exe version
+
+      - name: Install UPX
+        run: choco install upx -y
+        shell: pwsh
+
+      - name: Build exe
+        run: |
+          cd windows_app
+          pyinstaller build.spec --noconfirm
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: V2Scanner-Windows
+          path: windows_app/dist/V2Scanner.exe
+
+  build-macos-intel:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests pyinstaller pysocks
+
+      - name: Download xray
+        run: |
+          curl -sL "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-macos-64.zip" -o xray.zip
+          unzip -o xray.zip xray -d mac_app/
+          chmod +x mac_app/xray
+          rm xray.zip
+
+      - name: Verify xray
+        run: mac_app/xray version
+
+      - name: Build
+        run: |
+          cd mac_app
+          pyinstaller build_mac.spec --noconfirm
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: V2Scanner-macOS-Intel
+          path: mac_app/dist/V2Scanner
+
+  build-macos-arm:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests pyinstaller pysocks
+
+      - name: Download xray
+        run: |
+          curl -sL "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-macos-arm64-v8a.zip" -o xray.zip
+          unzip -o xray.zip xray -d mac_app/
+          chmod +x mac_app/xray
+          rm xray.zip
+
+      - name: Verify xray
+        run: mac_app/xray version
+
+      - name: Build
+        run: |
+          cd mac_app
+          pyinstaller build_mac.spec --noconfirm
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: V2Scanner-macOS-AppleSilicon
+          path: mac_app/dist/V2Scanner
