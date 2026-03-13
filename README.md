@@ -82,7 +82,7 @@ chmod +x build_mac.sh
 
 ## CI/CD
 
-Builds are automated via GitHub Actions. Every push to `main` builds all 3 targets (Windows, macOS Intel, macOS Apple Silicon).
+Builds are automated via GitHub Actions. Every push to `main` builds Windows and macOS (Apple Silicon) and publishes a release.
 
 ## License
 

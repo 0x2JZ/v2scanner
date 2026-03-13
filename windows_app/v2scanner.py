@@ -9,7 +9,6 @@ import json
 import subprocess
 import tempfile
 import time
-import signal
 import socket
 import threading
 import queue

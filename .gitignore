@@ -1,8 +1,36 @@
-*.zip
+# Binaries
 *.exe
+*.zip
 *.7z
+*.dmg
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+*.eggs/
+
+# PyInstaller
 build/
 dist/
 *.spec.bak
+*.manifest
+
+# Xray binaries (downloaded at build time)
+xray
+xray.exe
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude
 .claude/

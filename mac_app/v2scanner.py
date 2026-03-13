@@ -1,5 +1,5 @@
 """
-V2 Scanner — Portable Windows App
+V2 Scanner — Portable macOS App
 Tests V2Ray/Xray proxy configs and lists working ones.
 """
 
@@ -9,7 +9,6 @@ import json
 import subprocess
 import tempfile
 import time
-import signal
 import socket
 import threading
 import queue
