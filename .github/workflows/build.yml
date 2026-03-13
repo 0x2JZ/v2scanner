@@ -46,6 +46,7 @@ jobs:
 
   build-macos-intel:
     runs-on: macos-13
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +80,7 @@ jobs:
 
   build-macos-arm:
     runs-on: macos-14
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -112,6 +114,7 @@ jobs:
 
   release:
     needs: [build-windows, build-macos-intel, build-macos-arm]
+    if: ${{ !cancelled() && needs.build-windows.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -125,21 +128,31 @@ jobs:
       - name: Package artifacts
         run: |
           cd artifacts
-          cd V2Scanner-Windows && zip ../V2Scanner-Windows.zip V2Scanner.exe && cd ..
-          cd V2Scanner-macOS-Intel && chmod +x V2Scanner && zip ../V2Scanner-macOS-Intel.zip V2Scanner && cd ..
-          cd V2Scanner-macOS-AppleSilicon && chmod +x V2Scanner && zip ../V2Scanner-macOS-AppleSilicon.zip V2Scanner && cd ..
+          if [ -d "V2Scanner-Windows" ]; then
+            cd V2Scanner-Windows && zip ../V2Scanner-Windows.zip V2Scanner.exe && cd ..
+          fi
+          if [ -d "V2Scanner-macOS-Intel" ]; then
+            cd V2Scanner-macOS-Intel && chmod +x V2Scanner && zip ../V2Scanner-macOS-Intel.zip V2Scanner && cd ..
+          fi
+          if [ -d "V2Scanner-macOS-AppleSilicon" ]; then
+            cd V2Scanner-macOS-AppleSilicon && chmod +x V2Scanner && zip ../V2Scanner-macOS-AppleSilicon.zip V2Scanner && cd ..
+          fi
 
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete latest --yes 2>/dev/null || true
-          gh release create latest \
-            artifacts/V2Scanner-Windows.zip \
-            artifacts/V2Scanner-macOS-Intel.zip \
-            artifacts/V2Scanner-macOS-AppleSilicon.zip \
-            --title "V2Scanner — Latest Build" \
-            --notes "Automated build from \`main\` branch.
+          gh release delete latest --repo ${{ github.repository }} --yes 2>/dev/null || true
+
+          ASSETS=""
+          for f in artifacts/V2Scanner-Windows.zip artifacts/V2Scanner-macOS-Intel.zip artifacts/V2Scanner-macOS-AppleSilicon.zip; do
+            [ -f "$f" ] && ASSETS="$ASSETS $f"
+          done
+
+          gh release create latest $ASSETS \
+            --repo ${{ github.repository }} \
+            --title "V2Scanner - Latest Build" \
+            --notes "Automated build from main branch.
 
           **Downloads:**
           - **Windows**: V2Scanner-Windows.zip
